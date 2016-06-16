@@ -18,12 +18,13 @@ Current Maintainers:
 
 # Installation
 
-Clone this project, and follow the instructions in ./docs/test_collector_user_guide.
+Clone this project, and follow the instructions in the 
+[Test Collector User Guide](./docs/test_collector_user_guide).
 
 # Use
 
 The code is documented using docstrings - start from the
 [Test Collector](./code/collector/collector.py).
 
-See ./docs/att_interface_definition/att_service_specification.docx for the 
-Vendor Event Listener specification.
+For further information see the [Vendor Event Listener 
+specification](./docs/att_interface_definition/att_service_specification.docx).
