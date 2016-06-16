@@ -18,8 +18,8 @@ Current Maintainers:
 
 # Installation
 
-Clone this project, and follow the instructions in the 
-[Test Collector User Guide](./docs/test_collector_user_guide).
+Clone this project, and follow the instructions in the [Test Collector User 
+Guide](./docs/test_collector_user_guide/test_collector_user_guide.md).
 
 # Use
 
