@@ -8,7 +8,7 @@ Background
 
 This document describes how to use the Test Collector application to simulate
 the service API described in "AT&T Service Specification, Service: 
-Vendor Event Listener Revision 2.0, 12-Feb-2016". 
+Vendor Event Listener Revision 2.11, 16-Sep-2016".
 
 Purpose
 -------
@@ -63,7 +63,12 @@ The validating collector provides a basic test capability for
 
 -   Validating the credentials provided in the request.
 
--   Responding with a 402 No Content for valid requests.
+-   Responding with a 202 Accepted for valid requests.
+
+-   Test Control endpoint allowing a test harness or user to set a pending
+    commandList, to be sent in response to the next event received.
+
+-   Responding with a 202 Accepted plus a pending commandList.
 
 -   Responding with a 401 Unauthorized error response-code and a JSON
     exception response for failed authentication.
@@ -112,6 +117,7 @@ Wherever you chose to run the Test Collector, note that the
     # * {ServerRoot}/eventListener/v{apiVersion}
     # * {ServerRoot}/eventListener/v{apiVersion}/{topicName}
     # * {ServerRoot}/eventListener/v{apiVersion}/eventBatch
+    # * {ServerRoot}/eventListener/v{apiVersion}/clientThrottlingState
     #
     # The "vel\_topic\_name" parameter is used as the "topicName" element in the path
     # and may be empty.
@@ -233,4 +239,37 @@ For example: A Fault event failing to validate:
             }
         }
     }
+```
+
+Test Control Interface
+----------------------
+
+The test collector will accept any valid commandList on the Test Control interface,
+and will store it until the next event is received at the collector.
+At this point, it will send it to the event sender, and discard the pending commandList.
+
+For example, a POST of the following JSON will result in a measurement interval change
+command being sent to the sender of the next event.
+
+```
+{
+    "commandList": [
+        {
+            "command": {
+                "commandType": "measurementIntervalChange",
+                "measurementInterval": 60
+            }
+        }
+    ]
+}
+```
+
+A python script "test_control.py" provides an example of commandList injection,
+and contains various functions to generate example command lists.
+
+The test control script can be run manually, either on a Linux platform or a Windows PC.
+It is invoked with optional command-line arguments for the fqdn and port number of the 
+test collector to be controlled:
+```
+  C:> python test_control.py --fqdn 127.0.0.1 --port 30000
 ```
