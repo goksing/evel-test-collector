@@ -44,31 +44,62 @@
 				}
 			}
 		},
-		"capacityFields": {
-			"description": "fields specific to capacity events",
-			"type": "object",
-			"properties": { 
-				"additionalFields": {
-					"description": "array of name-value pair fields",
-					"type": "array",
-					"items": {
-						"$ref": "#/definitions/field"
-					}
-				},
-				"capacityFieldsVersion": {
-					"description": "version of the capacityFields block",
-					"type": "number"
-				}
-			}
-		},
  		"codecsInUse": {
 			"description": "number of times an identified codec was used over the measurementInterval",
 			"type": "object",
 			"properties": {
 				"codecIdentifier": { "type": "string" },
-				"codecUtilization": { "type": "number" }
+				"numberInUse": { "type": "number" }
 			},
-			"required": [ "codecIdentifier", "codecUtilization" ]
+			"required": [ "codecIdentifier", "numberInUse" ]
+		},
+        "codecSelected": {
+            "description": "codec selected for the call - 'PCMA', 'G729A', ...",
+			"type": "object",
+			"properties": {
+				"codec": { "type": "string" }
+			}
+        },
+        "codecSelectedTranscoding": {
+            "description": "codecs selected for the call, when transcoding is occurring",
+			"type": "object",
+			"properties": {
+				"calleeSideCodec": { "type": "string" },
+				"callerSideCodec": { "type": "string" }
+			}
+        },
+ 		"command": {
+			"description": "command from an event collector toward an event source",
+			"type": "object",
+			"properties": {
+				"commandType": {
+					"type": "string",
+					"enum": [
+						"measurementIntervalChange",
+						"provideThrottlingState",
+						"throttlingSpecification"
+					]
+				},
+				"eventDomainThrottleSpecification": { "$ref": "#/definitions/eventDomainThrottleSpecification" },
+				"measurementInterval": { "type": "number" }
+			},
+			"required": [ "commandType" ]
+		},
+		"commandList": {
+			"description": "array of commands from an event collector toward an event source",
+			"type": "array",
+			"items": {
+			    "$ref": "#/definitions/commandListEntry"
+			},
+			"minItems": 0
+		},
+ 		"commandListEntry": {
+			"description": "reference to a command object",
+			"type": "object",
+			"properties": {
+				"command": {"$ref": "#/definitions/command"}
+			},
+			"required": [ "command" ]
 		},
 		"commonEventHeader": {
 			"description": "fields common to all events",
@@ -78,15 +109,16 @@
 					"description": "the eventing domain associated with the event",
 					"type": "string",
 					"enum": [
-						"capacity",
 						"fault",
 						"heartbeat",
 						"measurementsForVfScaling",
 						"mobileFlow",
 						"other",
+						"serviceEvents",
+						"signaling",						
+						"stateChange",
 						"syslog",
-						"thresholdCrossingAlert",
-						"usage"
+						"thresholdCrossingAlert"
 					]
 				},
 				"eventId": {
@@ -116,11 +148,11 @@
 					]
 				},
 				"reportingEntityId": {
-					"description": "UUID identifying the entity reporting the event, for example an EMS",
+					"description": "UUID identifying the entity reporting the event, for example an OAM VM",
 					"type": "string"
 				},
 				"reportingEntityName": {
-					"description": "name of the entity reporting the event, for example, an EMS",
+					"description": "name of the entity reporting the event, for example, an OAM VM",
 					"type": "string"
 				},
 				"sequence": {
@@ -144,9 +176,9 @@
 					"type": "number"
 				}
 			},
-			"required": [ "domain", "eventId", "functionalRole", "lastEpochMicrosec", 
-						  "priority", "reportingEntityId", "reportingEntityName", 
-			              "sequence", "sourceId", "sourceName", "startEpochMicrosec" ]
+			"required": [ "domain", "eventId", "functionalRole", "lastEpochMicrosec",
+						  "priority", "reportingEntityName", "sequence",
+			              "sourceName", "startEpochMicrosec" ]
 		},
 		"counter": {
 			"description": "performance counter",
@@ -168,31 +200,134 @@
 			},
 			"required": [ "cpuIdentifier", "percentUsage" ]
 		},
+        "endOfCallVqmSummaries": {
+            "description": "",
+			"type": "object",
+			"properties": {
+                "adjacencyName": {
+                    "description": " adjacency name",
+                    "type": "string"
+                },
+                "endpointDescription": {
+                    "description": "‘Caller’, ‘Callee’",
+                    "type": "string",
+                    "enum": ["Caller", "Callee"]
+                },
+                "endpointJitter": {
+                    "description": "",
+                    "type": "number"
+                },
+                "endpointRtpOctetsDiscarded": {
+                    "description": "",
+                    "type": "number"
+                },
+                "endpointRtpOctetsReceived": {
+                    "description": "",
+                    "type": "number"
+                },
+                "endpointRtpOctetsSent": {
+                    "description": "",
+                    "type": "number"
+                },
+                "endpointRtpPacketsDiscarded": {
+                    "description": "",
+                    "type": "number"
+                },
+                "endpointRtpPacketsReceived": {
+                    "description": "",
+                    "type": "number"
+                },
+                "endpointRtpPacketsSent": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localJitter": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localRtpOctetsDiscarded": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localRtpOctetsReceived": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localRtpOctetsSent": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localRtpPacketsDiscarded": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localRtpPacketsReceived": {
+                    "description": "",
+                    "type": "number"
+                },
+                "localRtpPacketsSent": {
+                    "description": "",
+                    "type": "number"
+                },
+                "mosCqe": {
+                    "description": "1-5 1dp",
+                    "type": "number"
+                },
+                "packetsLost": {
+                    "description": "",
+                    "type": "number"
+                },
+                "packetLossPercent": {
+                    "description" : "Calculated percentage packet loss based on Endpoint RTP packets lost (as reported in RTCP) and Local RTP packets sent. Direction is based on Endpoint description (Caller, Callee). Decimal (2 dp)",
+                    "type": "number"
+                },
+                "rFactor": {
+                    "description": "0-100",
+                    "type": "number"
+                },
+                "roundTripDelay": {
+                    "description": "millisecs",
+                    "type": "number"
+                }
+            }
+        },
+		"errors": {
+			"description": "receive and transmit errors for the measurements domain",
+			"type": "object",
+			"properties": {
+				"receiveDiscards": { "type": "number" },
+				"receiveErrors": { "type": "number" },
+				"transmitDiscards": { "type": "number" },
+				"transmitErrors": { "type": "number" }
+			},
+			"required": [ "receiveDiscards", "receiveErrors", "transmitDiscards", "transmitErrors" ]
+		},
         "event": {
             "description": "generic event format",
 	        "type": "object",
 	        "properties": {
-		        "capacityFields": { "$ref": "#/definitions/capacityFields" },
 		        "commonEventHeader": { "$ref": "#/definitions/commonEventHeader" },
 		        "faultFields": { "$ref": "#/definitions/faultFields" },
 	 	        "measurementsForVfScalingFields": { "$ref": "#/definitions/measurementsForVfScalingFields" },
 				"mobileFlowFields": { "$ref": "#/definitions/mobileFlowFields" },
 		        "otherFields": { "$ref": "#/definitions/otherFields" },
+		        "serviceEventsFields": { "$ref": "#/definitions/serviceEventsFields" },
+		        "signalingFields": { "$ref": "#/definitions/signalingFields" },
+		        "stateChangeFields": { "$ref": "#/definitions/stateChangeFields" },
 				"syslogFields": { "$ref": "#/definitions/syslogFields" },
-		        "thresholdCrossingAlertFields": { "$ref": "#/definitions/thresholdCrossingAlertFields" },
-		        "usageFields": { "$ref": "#/definitions/usageFields" }
+		        "thresholdCrossingAlertFields": { "$ref": "#/definitions/thresholdCrossingAlertFields" }
         	},
             "required": [ "commonEventHeader" ]
         },
 		"eventDomainThrottleSpecification": {
 			"description": "specification of what information to suppress within an event domain",
 			"type": "object",
-			"properties": { 
-		        "eventDomain": { 
-			        "description": "Event domain enum from the Event Listener Spec, currently: capacity, fault, heartbeat, measurement, mobileFlow, other, syslog, thresholdCrossingAlert, usage",
+			"properties": {
+		        "eventDomain": {
+			        "description": "Event domain enum from the commonEventHeader domain field",
 			        "type": "string"
 		        },
-		        "suppressedFieldNames": { 
+		        "suppressedFieldNames": {
 			        "description": "List of optional field names in the event block that should not be sent to the Event Listener",
 			        "type": "array",
 					"items": {
@@ -212,23 +347,50 @@
 		"eventDomainThrottleSpecificationList": {
 			"description": "array of eventDomainThrottleSpecifications",
 			"type": "array",
-			"items": { 
+			"items": {
 			    "$ref": "#/definitions/eventDomainThrottleSpecification"
 			},
 			"minItems": 0
 		},
+		"eventInstanceIdentifier": {
+			"description": "event instance identifiers",
+			"type": "object",
+			"properties": {
+				"eventId": {
+					"description": "event identifier",
+					"type": "string"
+				},
+				"vendorId": {
+					"description": "vendor identifier",
+					"type": "string"
+				},
+				"productId": {
+					"description": "product identifier",
+					"type": "string"
+				},
+				"subsystemId": {
+					"description": "subsystem identifier",
+					"type": "string"
+				},
+				"eventFriendlyName": {
+					"description": "event instance friendly name",
+					"type": "string"
+				}
+            },
+			"required": [ "eventId", "vendorId" ]
+        },
 		"eventList": {
 			"description": "array of events",
 			"type": "array",
-			"items": {  
-				"$ref": "#/definitions/event" 
+			"items": {
+				"$ref": "#/definitions/event"
 			}
 		},
 		"eventThrottlingState": {
 			"description": "reports the throttling in force at the event source",
 			"type": "object",
-			"properties": { 
-		        "eventThrottlingMode": { 
+			"properties": {
+		        "eventThrottlingMode": {
 			        "description": "Mode the event manager is in",
 			        "type": "string",
 					"enum": [
@@ -271,19 +433,8 @@
 					]
 				},
 				"eventSourceType": {
-					"description": "type of event source",
-					"type": "string",
-					"enum": [
-						"other(0)",
-						"router(1)",
-						"switch(2)",
-						"host(3)",
-						"card(4)",
-						"port(5)",
-						"slotThreshold(6)",
-						"portThreshold(7)",
-						"virtualMachine(8)"
-					]
+					"description": "type of event source; examples: other, router, switch, host, card, port, slotThreshold, portThreshold, virtualMachine, virtualNetworkFunction",
+					"type": "string"
 				},
 				"faultFieldsVersion": {
 					"description": "version of the faultFields block",
@@ -336,10 +487,10 @@
 				"ephemeralConfigured": { "type": "number" },
 				"ephemeralIops": { "type": "number" },
 				"ephemeralUsed": { "type": "number" },
-				"vmIdentifier": { "type": "string" }
+				"filesystemName": { "type": "string" }
 			},
 			"required": [ "blockConfigured", "blockIops", "blockUsed", "ephemeralConfigured",
-			              "ephemeralIops", "ephemeralUsed", "vmIdentifier" ]
+			              "ephemeralIops", "ephemeralUsed", "filesystemName" ]
 		},
 		"gtpPerFlowMetrics": {
 			"description": "Mobility GTP Protocol per flow metrics",
@@ -386,7 +537,7 @@
 					"type": "number"
 				},
 				"flowActivationTime": {
-					"description": "time the connection is activated in the flow being reported on, or transmission time of the first packet if activation time is not available--should be like 'Wed, 15 Oct 2014 13:01:52 GMT'",
+					"description": "time the connection is activated in the flow being reported on, or transmission time of the first packet if activation time is not available; with RFC 2822 compliant format: ‘Sat, 13 Mar 2010 11:29:05 -0800’",
 					"type": "string"
 				},
 				"flowDeactivatedBy": {
@@ -402,7 +553,7 @@
 					"type": "number"
 				},
 				"flowDeactivationTime": {
-					"description": "Transmission time of the first packet in the flow connection being reported on with the following sample format: ‘Wed, 15 Oct 2014 13:01:52 GMT’",
+					"description": "Transmission time of the first packet in the flow connection being reported on; with RFC 2822 compliant format: ‘Sat, 13 Mar 2010 11:29:05 -0800’",
 					"type": "string"
 				},
 				"flowStatus": {
@@ -419,22 +570,22 @@
 				},
 				"ipTosCountList": {
 					"description": "array of key: value pairs where the keys are drawn from the IP Type-of-Service identifiers which range from '0' to '255', and the values are the count of packets that had those ToS identifiers in the flow",
-                    "type": "array", 
-                    "uniqueItems": true, 
-                    "items": { 
-						"type": "array", 
-						"items": [ 
-							{ "type": "string" }, 
-							{ "type": "number" } 
-						], 
-						"additionalItems": false 
-					} 
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+						"type": "array",
+						"items": [
+							{ "type": "string" },
+							{ "type": "number" }
+						],
+						"additionalItems": false
+					}
 				},
 				"ipTosList": {
 					"description": "Array of unique IP Type-of-Service values observed in the flow where values range from '0' to '255'",
 					"type": "array",
-					"items": {  
-						"type": "string" 
+					"items": {
+						"type": "string"
 					}
 				},
 				"largePacketRtt": {
@@ -459,22 +610,22 @@
 				},
 				"mobileQciCosCountList": {
 					"description": "array of key: value pairs where the keys are drawn from LTE QCI or UMTS class of service strings, and the values are the count of packets that had those strings in the flow",
-                    "type": "array", 
-                    "uniqueItems": true, 
-                    "items": { 
-						"type": "array", 
-						"items": [ 
-							{ "type": "string" }, 
-							{ "type": "number" } 
-						], 
-						"additionalItems": false 
-					} 
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+						"type": "array",
+						"items": [
+							{ "type": "string" },
+							{ "type": "number" }
+						],
+						"additionalItems": false
+					}
 				},
 				"mobileQciCosList": {
 					"description": "Array of unique LTE QCI or UMTS class-of-service values observed in the flow",
 					"type": "array",
-					"items": {  
-						"type": "string" 
+					"items": {
+						"type": "string"
 					}
 				},
 				"numActivationFailures": {
@@ -559,22 +710,22 @@
 				},
 				"tcpFlagCountList": {
 					"description": "array of key: value pairs where the keys are drawn from TCP Flags and the values are the count of packets that had that TCP Flag in the flow",
-                    "type": "array", 
-                    "uniqueItems": true, 
-                    "items": { 
-						"type": "array", 
-						"items": [ 
-							{ "type": "string" }, 
-							{ "type": "number" } 
-						], 
-						"additionalItems": false 
-					} 
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+						"type": "array",
+						"items": [
+							{ "type": "string" },
+							{ "type": "number" }
+						],
+						"additionalItems": false
+					}
 				},
 				"tcpFlagList": {
 					"description": "Array of unique TCP Flags observed in the flow",
 					"type": "array",
-					"items": {  
-						"type": "string" 
+					"items": {
+						"type": "string"
 					}
 				},
 				"timeToFirstByte": {
@@ -583,20 +734,20 @@
 				}
 			},
 			"required": [ "avgBitErrorRate", "avgPacketDelayVariation", "avgPacketLatency",
-                          "avgReceiveThroughput", "avgTransmitThroughput", 			
+                          "avgReceiveThroughput", "avgTransmitThroughput",
 						  "flowActivationEpoch", "flowActivationMicrosec",
  						  "flowDeactivationEpoch", "flowDeactivationMicrosec",
-                          "flowDeactivationTime", "flowStatus", 
-						  "maxPacketDelayVariation", "numActivationFailures", 
+                          "flowDeactivationTime", "flowStatus",
+						  "maxPacketDelayVariation", "numActivationFailures",
  						  "numBitErrors", "numBytesReceived", "numBytesTransmitted",
-						  "numDroppedPackets", "numL7BytesReceived", 
-						  "numL7BytesTransmitted", "numLostPackets",  
-						  "numOutOfOrderPackets", "numPacketErrors", 
-						  "numPacketsReceivedExclRetrans", 
+						  "numDroppedPackets", "numL7BytesReceived",
+						  "numL7BytesTransmitted", "numLostPackets",
+						  "numOutOfOrderPackets", "numPacketErrors",
+						  "numPacketsReceivedExclRetrans",
 						  "numPacketsReceivedInclRetrans",
-						  "numPacketsTransmittedInclRetrans", 
-						  "numRetries", "numTimeouts", "numTunneledL7BytesReceived", 
-						  "roundTripTime", "timeToFirstByte"  
+						  "numPacketsTransmittedInclRetrans",
+						  "numRetries", "numTimeouts", "numTunneledL7BytesReceived",
+						  "roundTripTime", "timeToFirstByte"
 			]
 		},
 		"latencyBucketMeasure": {
@@ -609,109 +760,13 @@
 			},
 			"required": [ "countsInTheBucket" ]
 		},
-		"measurementsForVfScalingFields": {
-			"description": "measurement fields for vf scaling",
+        "marker": {
+            "description": "",
 			"type": "object",
 			"properties": {
-				"additionalMeasurements": {
-					"description": "additional measurement fields",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/measurementGroup" 
-					}
-				},
-				"aggregateCpuUsage": { 
-					"description": "aggregate CPU usage of the VM on which the VNFC reporting the event is running",
-					"type": "number" 
-				},
-				"codecUsageArray": {
-					"description": "array of codecs in use",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/codecsInUse" 
-					}
-				},
-				"concurrentSessions": { 
-					"description": "peak concurrent sessions for the VM over the measurementInterval",
-					"type": "number" 
-				},
-				"configuredEntities": { 
-					"description": "peak total number of users, subscribers, devices, adjacencies, etc., for the VM over the measurementInterval",
-					"type": "number" 
-				},
-				"cpuUsageArray": {
-					"description": "usage of an array of CPUs",
-					"type": "array",
-					"items": {
-						"$ref": "#/definitions/cpuUsage"
-					}
-				},
-				"featureUsageArray": {
-					"description": "array of features in use",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/featuresInUse" 
-					}
-				},
-				"filesystemUsageArray": {
-					"description": "filesystem usage of the VM on which the VNFC reporting the event is running",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/filesystemUsage" 
-					}
-				},
-				"latencyDistribution": { 
-					"description": "array of integers representing counts of requests whose latency falls within per-VNF configured ranges",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/latencyBucketMeasure" 
-					}
-				},
-				"meanRequestLatency": { 
-					"description": "mean seconds required to respond to each request for the VM on which the VNFC reporting the event is running",
-					"type": "number" 
-				},
-				"measurementFieldsVersion": {
-					"description": "version of the measurementFields block",
-					"type": "number"
-				},
-				"measurementInterval": {
-					"description": "interval over which the usage measures are being reported",
-					"type": "number"
-				},
-				"memoryConfigured": { 
-					"description": "memory configured in the VM on which the VNFC reporting the event is running",
-					"type": "number"
-				},
-				"memoryUsed": {
-					"description": "memory usage of the VM on which the VNFC reporting the event is running",
-					"type": "number"
-				},
-				"numberOfMediaPortsInUse": {
-					"description": "number of media ports in use",
-					"type": "number"
-				},
-				"requestRate": { 
-					"description": "peak request rate per second, for the VM over the measurementInterval",
-					"type": "number" 
-				},
-				"vnfcScalingMetric": {
-					"description": "represents busy-ness of the VNF from 0 to 100 as reported by the VNFC",
-					"type": "number"
-				},
-				"vNicUsageArray": {
-					"description": "usage of an array of virtual network interface cards",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/vNicUsage" 
-					}
-				}
-			},
-			"required": [ "concurrentSessions", "configuredEntities", "cpuUsageArray", 
-			              "filesystemUsageArray", "latencyDistribution", "meanRequestLatency", 
-						  "measurementInterval", "memoryConfigured", "memoryUsed", 
-						  "requestRate", "vNicUsageArray" ]
-		},
+				"phoneNumber": { "type": "string" }
+			}
+        },
 		"measurementGroup": {
 			"description": "measurement group",
 			"type": "object",
@@ -727,6 +782,117 @@
 			},
 			"required": [ "name", "measurements" ]
 		},
+		"measurementsForVfScalingFields": {
+			"description": "measurementsForVfScaling fields",
+			"type": "object",
+			"properties": {
+				"additionalMeasurements": {
+					"description": "additional measurement fields",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/measurementGroup"
+					}
+				},
+				"aggregateCpuUsage": {
+					"description": "aggregate CPU usage of the VM on which the VNFC reporting the event is running",
+					"type": "number"
+				},
+				"codecUsageArray": {
+					"description": "array of codecs in use",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/codecsInUse"
+					}
+				},
+				"concurrentSessions": {
+					"description": "peak concurrent sessions for the VM or VNF over the measurementInterval",
+					"type": "number"
+				},
+				"configuredEntities": {
+					"description": "over the measurementInterval, peak total number of: users, subscribers, devices, adjacencies, etc., for the VM, or subscribers, devices, etc., for the VNF",
+					"type": "number"
+				},
+				"cpuUsageArray": {
+					"description": "usage of an array of CPUs",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/cpuUsage"
+					}
+				},
+				"errors": { "$ref": "#/definitions/errors" },
+				"featureUsageArray": {
+					"description": "array of features in use",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/featuresInUse"
+					}
+				},
+				"filesystemUsageArray": {
+					"description": "filesystem usage of the VM on which the VNFC reporting the event is running",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/filesystemUsage"
+					}
+				},
+				"latencyDistribution": {
+					"description": "array of integers representing counts of requests whose latency in milliseconds falls within per-VNF configured ranges",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/latencyBucketMeasure"
+					}
+				},
+				"meanRequestLatency": {
+					"description": "mean seconds required to respond to each request for the VM on which the VNFC reporting the event is running",
+					"type": "number"
+				},
+				"measurementInterval": {
+					"description": "interval over which measurements are being reported in seconds",
+					"type": "number"
+				},
+				"measurementsForVfScalingVersion": {
+					"description": "version of the measurementsForVfScaling block",
+					"type": "number"
+				},
+				"memoryConfigured": {
+					"description": "memory configured in the VM on which the VNFC reporting the event is running",
+					"type": "number"
+				},
+				"memoryUsed": {
+					"description": "memory usage of the VM on which the VNFC reporting the event is running",
+					"type": "number"
+				},
+				"numberOfMediaPortsInUse": {
+					"description": "number of media ports in use",
+					"type": "number"
+				},
+				"requestRate": {
+					"description": "peak rate of service requests per second to the VNF over the measurementInterval",
+					"type": "number"
+				},
+				"vnfcScalingMetric": {
+					"description": "represents busy-ness of the VNF from 0 to 100 as reported by the VNFC",
+					"type": "number"
+				},
+				"vNicUsageArray": {
+					"description": "usage of an array of virtual network interface cards",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/vNicUsage"
+					}
+				}
+			},
+			"required": [ "measurementInterval" ]
+		},
+        "midCallRtcp": {
+            "description": "RTCP packet received ",
+			"type": "object",
+			"properties": {
+				"rtcpData": {
+                    "description": "Base64 encoding of the binary RTCP data (excluding Eth/IP/UDP headers) Base64 encoded array of bytes",
+                    "type": "string"
+                }
+			}
+        },
 		"mobileFlowFields": {
 			"description": "mobileFlow fields",
 			"type": "object",
@@ -800,6 +966,10 @@
 					"description": "mobile network code",
 					"type": "string"
 				},
+                "mobileFlowFieldsVersion": {
+                    "description": "version of the mobileFlowFields block",
+                    "type": "number"
+                },
 				"msisdn": {
 					"description": "MSISDN for the subscriber UE used in this flow, as an integer, if the flow connects to a mobile device",
 					"type": "string"
@@ -860,14 +1030,14 @@
 		"otherFields": {
 			"description": "additional fields not reported elsewhere",
 			"type": "array",
-			"items": {  
-				"$ref": "#/definitions/field" 
+			"items": {
+				"$ref": "#/definitions/field"
 			}
 		},
 		"requestError": {
 			"description": "standard request error data structure",
 			"type": "object",
-			"properties": { 
+			"properties": {
 			    "messageId": {
 					"description": "Unique message identifier of the format ‘ABCnnnn’ where ‘ABC’ is either ‘SVC’ for Service Exceptions or ‘POL’ for Policy Exception",
 					"type": "string"
@@ -885,7 +1055,129 @@
 					"type": "string"
 				}
 			},
-			"required": [ "messageId", "text" ] 
+			"required": [ "messageId", "text" ]
+		},
+        "serviceEventsFields": {
+            "description": "service events fields",
+            "type": "object",
+            "properties": {
+                "additionalFields": {
+					"description": "additional service event fields if needed",
+					"type": "array",
+					"items": {  
+						"$ref": "#/definitions/field" 
+					}
+                },
+                "codecSelected": {
+                    "$ref": "#/definitions/codecSelected"
+                },
+                "codecSelectedTranscoding": {
+                    "$ref": "#/definitions/codecSelectedTranscoding"
+                },
+                "correlator": {
+                    "description": "this is the same for all events on this call",
+                    "type": "string"
+                },
+                "endOfCallVqmSummaries": {
+                    "$ref": "#/definitions/endOfCallVqmSummaries"
+                },
+                "eventInstanceIdentifier": {
+                    "$ref": "#/definitions/eventInstanceIdentifier"
+                },
+                "marker": {
+                    "$ref": "#/definitions/marker"
+                },
+                "midCallRtcp": {
+                    "$ref": "#/definitions/midCallRtcp"
+                },
+                "serviceEventsFieldsVersion": {
+                    "description": "version of the serviceEventsFields block",
+                    "type": "number"
+                }
+            },
+            "required": [ "eventInstanceIdentifier" ]
+        },
+        "signalingFields": {
+            "description": "signaling fields",
+            "type": "object",
+            "properties": {
+                "compressedSip": {
+                    "description": "the full SIP request/response including headers and bodies",
+                    "type": "string"
+                },
+                "correlator": {
+                    "description": "this is the same for all events on this call",
+                    "type": "string"
+                },
+                "eventInstanceIdentifier": {
+                    "$ref": "#/definitions/eventInstanceIdentifier"
+                },
+                "localIpAddress": {
+                    "description": "IP address on VNF",
+                    "type": "string"
+                },
+                "localPort": {
+                    "description": "port on VNF",
+                    "type": "string"
+                },
+                "remoteIpAddress": {
+                    "description": "IP address of peer endpoint",
+                    "type": "string"
+                },
+                "remotePort": {
+                    "description": "port of peer endpoint",
+                    "type": "string"
+                },
+                "signalingFieldsVersion": {
+                    "description": "version of the signalingFields block",
+                    "type": "number"
+                },
+                "summarySip": {
+                    "description": "the SIP Method or Response (‘INVITE’, ‘200 OK’, ‘BYE’, etc)",
+                    "type": "string"
+                }
+            },
+            "required": [ "eventInstanceIdentifier" ]
+        },
+		"stateChangeFields": {
+			"description": "stateChange fields",
+			"type": "object",
+			"properties": {
+				"additionalFields": {
+					"description": "additional stateChange fields if needed",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/field"
+					}
+				},
+				"newState": {
+					"description": "new state of the entity",
+					"type": "string",
+					"enum": [
+						"inService",
+						"maintenance",
+						"outOfService"
+					]
+				},
+				"oldState": {
+					"description": "previous state of the entity",
+					"type": "string",
+					"enum": [
+						"inService",
+						"maintenance",
+						"outOfService"
+					]
+				},
+				"stateChangeFieldsVersion": {
+					"description": "version of the stateChangeFields block",
+					"type": "number"
+				},
+				"stateInterface": {
+					"description": "card or port name of the entity that changed state",
+					"type": "string"
+				}
+			},
+			"required": [ "newState", "oldState", "stateInterface" ]
 		},
 		"suppressedNvPairs": {
 			"description": "List of specific NvPairsNames to suppress within a given Name-Value Field for event Throttling",
@@ -909,25 +1201,20 @@
 			"description": "sysLog fields",
 			"type": "object",
 			"properties": {
+				"additionalFields": {
+					"description": "additional syslog fields if needed",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/field"
+					}
+				},
 				"eventSourceHost": {
 					"description": "hostname of the device",
 					"type": "string"
 				},
 				"eventSourceType": {
-					"description": "type of event source",
-					"type": "string",
-					"enum": [  
-						"other(0)",
-						"router(1)",
-						"switch(2)",
-						"host(3)",
-						"card(4)",
-						"port(5)",
-						"slotThreshold(6)",
-						"portThreshold(7)",
-						"virtualMachine(8)",
-						"virtualNetworkFunction(9)"
-					]
+					"description": "type of event source; examples: other, router, switch, host, card, port, slotThreshold, portThreshold, virtualMachine, virtualNetworkFunction",
+					"type": "string"
 				},
 				"syslogFacility": {
 					"description": "numeric code from 0 to 23 for facility--see table in documentation",
@@ -949,17 +1236,17 @@
 					"description": "a change in the value of this field indicates a discontinuity in syslog reporting",
 					"type": "number"
 				},
-				"syslogVer": {
-					"description": "the version of the syslog protocol specification",
-					"type": "number"
-				},
 				"syslogSData": {
-					"description": "syslog structured data",
+					"description": "syslog structured data consisting of a structured data Id followed by a set of key value pairs",
 					"type": "string"
 				},
 				"syslogTag": {
-					"description": "aka messageId identifies the type of message",
+					"description": "msgId indicating the type of message such as TCPOUT or TCPIN; NILVALUE should be used when no other value can be provided",
 					"type": "string"
+				},
+				"syslogVer": {
+					"description": "IANA assigned version of the syslog protocol specification - typically 1",
+					"type": "number"
 				}
 			},
 			"required": [ "eventSourceType", "syslogMsg", "syslogTag" ]
@@ -968,11 +1255,18 @@
 			"description": "fields specific to threshold crossing alert events",
 			"type": "object",
 			"properties": {
+				"additionalFields": {
+					"description": "additional threshold crossing alert fields if needed",
+					"type": "array",
+					"items": {  
+						"$ref": "#/definitions/field" 
+					}
+				},
 				"additionalParameters": {
 					"description": "performance counters",
 					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/counter" 
+					"items": {
+						"$ref": "#/definitions/counter"
 					}
 				},
 				"alertAction": {
@@ -1008,7 +1302,7 @@
 					"items": { "type": "string" }
 				},
 				"collectionTimestamp": {
-					"description": "Time when the performance collector picked up the data",
+					"description": "Time when the performance collector picked up the data; with RFC 2822 compliant format: ‘Sat, 13 Mar 2010 11:29:05 -0800’",
 					"type": "string"
 				},
 				"dataCollector": {
@@ -1016,11 +1310,22 @@
 					"type": "string"
 				},
 				"elementType": {
-					"description": "Type of network element",
+					"description": "type of network element - internal ATT field",
 					"type": "string"
 				},
+				"eventSeverity": {
+					"description": "event severity or priority",
+					"type": "string",
+					"enum": [
+						"CRITICAL",
+						"MAJOR",
+						"MINOR",
+						"WARNING",
+						"NORMAL"
+					]
+				},
 				"eventStartTimestamp": {
-					"description": "Time closest to when the measurement was made",
+					"description": "Time closest to when the measurement was made; with RFC 2822 compliant format: ‘Sat, 13 Mar 2010 11:29:05 -0800’",
 					"type": "string"
 				},
 				"interfaceName": {
@@ -1028,7 +1333,7 @@
 					"type": "string"
 				},
 				"networkService": {
-					"description": "Network name",
+					"description": "network name - internal ATT field",
 					"type": "string"
 				},
 				"possibleRootCause": {
@@ -1039,23 +1344,19 @@
 					"description": "version of the thresholdCrossingAlertFields block",
 					"type": "number"
 				}
-			},	
+			},
 			"required": [
 				"additionalParameters",
 				"alertAction",
 				"alertDescription",
 				"alertType",
 				"collectionTimestamp",
-				"elementType",
-				"eventStartTimestamp",
-				"networkService"
+				"eventSeverity",
+				"eventStartTimestamp"
 			]
 		},
-		"usageFields": {
-			"description": "fields specific to usage events"
-		},
 		"vNicUsage": {
-			"description": "usage of an identified vNic in megabytes per second",
+			"description": "usage of identified virtual network interface card",
 			"type": "object",
 			"properties": {
 				"broadcastPacketsIn": { "type": "number" },
@@ -1064,14 +1365,14 @@
 				"bytesOut": { "type": "number" },
 				"multicastPacketsIn": { "type": "number" },
 				"multicastPacketsOut": { "type": "number" },
+				"packetsIn": { "type": "number" },
+				"packetsOut": { "type": "number" },
 				"unicastPacketsIn": { "type": "number" },
 				"unicastPacketsOut": { "type": "number" },
 				"vNicIdentifier": { "type": "string" }
 			},
-			"required": [ "broadcastPacketsIn", "broadcastPacketsOut", "bytesIn", "bytesOut",
-			              "multicastPacketsIn", "multicastPacketsOut", "unicastPacketsIn",
-						  "unicastPacketsOut", "vNicIdentifier"]
-		}		
+			"required": [ "bytesIn", "bytesOut", "packetsIn", "packetsOut", "vNicIdentifier"]
+		}
 	},
 	"title": "Event Listener",
 		"type": "object",

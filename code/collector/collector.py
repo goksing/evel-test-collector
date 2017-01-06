@@ -50,6 +50,7 @@ from base64 import b64decode
 import string
 import json
 import jsonschema
+from functools import partial
 
 _hello_resp = '''\
 <html>
@@ -77,8 +78,6 @@ __version__ = 0.1
 __date__ = '2015-12-04'
 __updated__ = '2015-12-04'
 
-API_VERSION = 1
-
 TESTRUN = False
 DEBUG = False
 PROFILE = False
@@ -90,24 +89,40 @@ vel_username = ''
 vel_password = ''
 
 #------------------------------------------------------------------------------
-# The JSON schema which we will use to validate.
+# The JSON schema which we will use to validate events.
 #------------------------------------------------------------------------------
 vel_schema = None
+
+#------------------------------------------------------------------------------
+# The JSON schema which we will use to validate client throttle state.
+#------------------------------------------------------------------------------
+throttle_schema = None
+
+#------------------------------------------------------------------------------
+# The JSON schema which we will use to provoke throttling commands for testing.
+#------------------------------------------------------------------------------
+test_control_schema = None
+
+#------------------------------------------------------------------------------
+# Pending command list from the testControl API
+# This is sent as a response commandList to the next received event.
+#------------------------------------------------------------------------------
+pending_command_list = None
 
 #------------------------------------------------------------------------------
 # Logger for this module.
 #------------------------------------------------------------------------------
 logger = None
 
-def vendor_event_listener(environ, start_response):
+def listener(environ, start_response, schema):
     '''
     Handler for the Vendor Event Listener REST API.
-    
+
     Extract headers and the body and check that:
-    
+
       1)  The client authenticated themselves correctly.
-      
-      2)  The body validates against the schema for the API.
+      2)  The body validates against the provided schema for the API.
+
     '''
     logger.info('Got a Vendor Event request')
     print('==== ' + time.asctime() + ' ' + '=' * 49)
@@ -136,18 +151,18 @@ def vendor_event_listener(environ, start_response):
     #--------------------------------------------------------------------------
     # If we have a schema file then check that the event matches that expected.
     #--------------------------------------------------------------------------
-    if (vel_schema is not None):
+    if (schema is not None):
         logger.debug('Attempting to validate data: {0}\n'
-                     'Against schema: {1}'.format(body, vel_schema))
+                     'Against schema: {1}'.format(body, schema))
         try:
             decoded_body = json.loads(body)
-            jsonschema.validate(decoded_body, vel_schema)
+            jsonschema.validate(decoded_body, schema)
             logger.info('Event is valid!')
             print('Valid body decoded & checked against schema OK:\n'
                   '{0}'.format(json.dumps(decoded_body,
-                                         sort_keys=True,
-                                         indent=4,
-                                         separators=(',', ': '))))
+                                          sort_keys=True,
+                                          indent=4,
+                                          separators=(',', ': '))))
 
         except jsonschema.SchemaError as e:
             logger.error('Schema is not valid! {0}'.format(e))
@@ -178,7 +193,7 @@ def vendor_event_listener(environ, start_response):
 
         except Exception as e:
             logger.error('Event invalid for unexpected reason! {0}'.format(e))
-            print('JSON body is not valid for unexpected reason! {0}'.format(e))
+            print('JSON body not valid for unexpected reason! {0}'.format(e))
 
     #--------------------------------------------------------------------------
     # See whether the user authenticated themselves correctly.
@@ -188,10 +203,27 @@ def vendor_event_listener(environ, start_response):
         print('Authenticated OK')
 
         #----------------------------------------------------------------------
-        # Respond to the caller.
+        # Respond to the caller. If we have a pending commandList from the
+        # testControl API, send it in response.
         #----------------------------------------------------------------------
-        start_response('204 No Content', [])
-        yield ''
+        global pending_command_list
+        if pending_command_list is not None:
+            start_response('202 Accepted',
+                           [('Content-type', 'application/json')])
+            response = pending_command_list
+            pending_command_list = None
+
+            print('\n'+ '='*80)
+            print('Sending pending commandList in the response:\n'
+                  '{0}'.format(json.dumps(response,
+                                          sort_keys=True,
+                                          indent=4,
+                                          separators=(',', ': '))))
+            print('='*80 + '\n')
+            yield json.dumps(response)
+        else:
+            start_response('202 Accepted', [])
+            yield ''
     else:
         logger.warn('Failed to authenticate OK')
         print('Failed to authenticate OK')
@@ -210,23 +242,110 @@ def vendor_event_listener(environ, start_response):
                     }
         yield json.dumps(req_error)
 
+def test_listener(environ, start_response, schema):
+    '''
+    Handler for the Test Collector Test Control API.
+
+    There is no authentication on this interface.
+
+    This simply stores a commandList which will be sent in response to the next
+    incoming event on the EVEL interface.
+    '''
+    global pending_command_list
+    logger.info('Got a Test Control input')
+    print('============================')
+    print('==== TEST CONTROL INPUT ====')
+
+    #--------------------------------------------------------------------------
+    # GET allows us to get the current pending request.
+    #--------------------------------------------------------------------------
+    if environ.get('REQUEST_METHOD') == 'GET':
+        start_response('200 OK', [('Content-type', 'application/json')])
+        yield json.dumps(pending_command_list)
+        return
+
+    #--------------------------------------------------------------------------
+    # Extract the content from the request.
+    #--------------------------------------------------------------------------
+    length = int(environ.get('CONTENT_LENGTH', '0'))
+    logger.debug('TestControl Content Length: {0}'.format(length))
+    body = environ['wsgi.input'].read(length)
+    logger.debug('TestControl Content Body: {0}'.format(body))
+
+    #--------------------------------------------------------------------------
+    # If we have a schema file then check that the event matches that expected.
+    #--------------------------------------------------------------------------
+    if (schema is not None):
+        logger.debug('Attempting to validate data: {0}\n'
+                     'Against schema: {1}'.format(body, schema))
+        try:
+            decoded_body = json.loads(body)
+            jsonschema.validate(decoded_body, schema)
+            logger.info('TestControl is valid!')
+            print('TestControl:\n'
+                  '{0}'.format(json.dumps(decoded_body,
+                                          sort_keys=True,
+                                          indent=4,
+                                          separators=(',', ': '))))
+
+        except jsonschema.SchemaError as e:
+            logger.error('TestControl Schema is not valid: {0}'.format(e))
+            print('TestControl Schema is not valid: {0}'.format(e))
+
+        except jsonschema.ValidationError as e:
+            logger.warn('TestControl input not valid: {0}'.format(e))
+            print('TestControl input not valid: {0}'.format(e))
+            print('Bad JSON body decoded:\n'
+                  '{0}'.format(json.dumps(decoded_body,
+                                          sort_keys=True,
+                                          indent=4,
+                                          separators=(',', ': '))))
+
+        except Exception as e:
+            logger.error('TestControl input not valid: {0}'.format(e))
+            print('TestControl Schema not valid: {0}'.format(e))
+    else:
+        logger.debug('Missing schema just decode JSON: {0}'.format(body))
+        try:
+            decoded_body = json.loads(body)
+            print('Valid JSON body (no schema checking) decoded:\n'
+                  '{0}'.format(json.dumps(decoded_body,
+                                          sort_keys=True,
+                                          indent=4,
+                                          separators=(',', ': '))))
+            logger.info('TestControl input not checked against schema!')
+
+        except Exception as e:
+            logger.error('TestControl input not valid: {0}'.format(e))
+            print('TestControl input not valid: {0}'.format(e))
+
+    #--------------------------------------------------------------------------
+    # Respond to the caller. If we received otherField 'ThrottleRequest',
+    # generate the appropriate canned response.
+    #--------------------------------------------------------------------------
+    pending_command_list = decoded_body
+    print('===== TEST CONTROL END =====')
+    print('============================')
+    start_response('202 Accepted', [])
+    yield ''
+
 def main(argv=None):
     '''
     Main function for the collector start-up.
-    
+
     Called with command-line arguments:
         *    --config *<file>*
         *    --section *<section>*
-        *    --verbose 
-        
+        *    --verbose
+
     Where:
-    
+
         *<file>* specifies the path to the configuration file.
-        
+
         *<section>* specifies the section within that config file.
-        
+
         *verbose* generates more information in the log files.
-        
+
     The process listens for REST API invocations and checks them. Errors are
     displayed to stdout and logged.
     '''
@@ -270,6 +389,10 @@ USAGE
                             action='version',
                             version=program_version_message,
                             help='Display version information')
+        parser.add_argument('-a', '--api-version',
+                            dest='api_version',
+                            default='3',
+                            help='set API version')
         parser.add_argument('-c', '--config',
                             dest='config',
                             default='/etc/opt/att/collector.conf',
@@ -286,6 +409,7 @@ USAGE
         #----------------------------------------------------------------------
         args = parser.parse_args()
         verbose = args.verbose
+        api_version = args.api_version
         config_file = args.config
         config_section = args.section
 
@@ -323,8 +447,14 @@ USAGE
                                      'schema_file',
                                      vars=overrides)
         base_schema_file = config.get(config_section,
-                                 'base_schema_file',
-                                  vars=overrides)
+                                      'base_schema_file',
+                                      vars=overrides)
+        throttle_schema_file = config.get(config_section,
+                                          'throttle_schema_file',
+                                          vars=overrides)
+        test_control_schema_file = config.get(config_section,
+                                           'test_control_schema_file',
+                                           vars=overrides)
 
         #----------------------------------------------------------------------
         # Finally we have enough info to start a proper flow trace.
@@ -363,6 +493,10 @@ USAGE
         logger.debug('Event Listener JSON Schema File = {0}'.format(
                                                               vel_schema_file))
         logger.debug('Base JSON Schema File = {0}'.format(base_schema_file))
+        logger.debug('Throttle JSON Schema File = {0}'.format(
+                                                         throttle_schema_file))
+        logger.debug('Test Control JSON Schema File = {0}'.format(
+                                                     test_control_schema_file))
 
         #----------------------------------------------------------------------
         # Perform some basic error checking on the config.
@@ -380,21 +514,50 @@ USAGE
             vel_path += '/'
 
         #----------------------------------------------------------------------
-        # Load up the vel_schema and base_schema, if they exist.
+        # Load up the vel_schema, if it exists.
         #----------------------------------------------------------------------
-        if (os.path.exists(vel_schema_file)):
+        if not os.path.exists(vel_schema_file):
+            logger.warning('Event Listener Schema File ({0}) not found. '
+                           'No validation will be undertaken.'.format(
+                                                              vel_schema_file))
+        else:
             global vel_schema
+            global throttle_schema
+            global test_control_schema
             vel_schema = json.load(open(vel_schema_file, 'r'))
             logger.debug('Loaded the JSON schema file')
+
+            #------------------------------------------------------------------
+            # Load up the throttle_schema, if it exists.
+            #------------------------------------------------------------------
+            if (os.path.exists(throttle_schema_file)):
+                logger.debug('Loading throttle schema')
+                throttle_fragment = json.load(open(throttle_schema_file, 'r'))
+                throttle_schema = {}
+                throttle_schema.update(vel_schema)
+                throttle_schema.update(throttle_fragment)
+                logger.debug('Loaded the throttle schema')
+
+            #------------------------------------------------------------------
+            # Load up the test control _schema, if it exists.
+            #------------------------------------------------------------------
+            if (os.path.exists(test_control_schema_file)):
+                logger.debug('Loading test control schema')
+                test_control_fragment = json.load(
+                    open(test_control_schema_file, 'r'))
+                test_control_schema = {}
+                test_control_schema.update(vel_schema)
+                test_control_schema.update(test_control_fragment)
+                logger.debug('Loaded the test control schema')
+
+            #------------------------------------------------------------------
+            # Load up the base_schema, if it exists.
+            #------------------------------------------------------------------
             if (os.path.exists(base_schema_file)):
                 logger.debug('Updating the schema with base definition')
                 base_schema = json.load(open(base_schema_file, 'r'))
                 vel_schema.update(base_schema)
                 logger.debug('Updated the JSON schema file')
-        else:
-            logger.warning('Event Listener Schema File ({0}) not found. '
-                           'No validation will be undertaken.'.format(
-                                                              vel_schema_file))
 
         #----------------------------------------------------------------------
         # We are now ready to get started with processing. Start-up the various
@@ -404,15 +567,33 @@ USAGE
         #  2) Register the functions for the URLs of interest.
         #  3) Run the webserver.
         #----------------------------------------------------------------------
-        root_url = '/{0}eventListener/v{1}{2}'.format(vel_path,
-                                                   API_VERSION,
-                                                   '/' + vel_topic_name
-                                                     if len(vel_topic_name) > 0
-                                                     else '')
+        root_url = '/{0}eventListener/v{1}{2}'.\
+                   format(vel_path,
+                          api_version,
+                          '/' + vel_topic_name
+                          if len(vel_topic_name) > 0
+                          else '')
+        throttle_url = '/{0}eventListener/v{1}/clientThrottlingState'.\
+                       format(vel_path, api_version)
         set_404_content(root_url)
         dispatcher = PathDispatcher()
+        vendor_event_listener = partial(listener, schema = vel_schema)
         dispatcher.register('GET', root_url, vendor_event_listener)
         dispatcher.register('POST', root_url, vendor_event_listener)
+        vendor_throttle_listener = partial(listener, schema = throttle_schema)
+        dispatcher.register('GET', throttle_url, vendor_throttle_listener)
+        dispatcher.register('POST', throttle_url, vendor_throttle_listener)
+
+        #----------------------------------------------------------------------
+        # We also add a POST-only mechanism for test control, so that we can
+        # send commands to a single attached client.
+        #----------------------------------------------------------------------
+        test_control_url = '/testControl/v{0}/commandList'.format(api_version)
+        test_control_listener = partial(test_listener,
+                                        schema = test_control_schema)
+        dispatcher.register('POST', test_control_url, test_control_listener)
+        dispatcher.register('GET', test_control_url, test_control_listener)
+
         httpd = make_server('', int(vel_port), dispatcher)
         print('Serving on port {0}...'.format(vel_port))
         httpd.serve_forever()
