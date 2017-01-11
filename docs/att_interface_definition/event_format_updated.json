@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-04/schema#",
 	
 	"definitions": {
-        "attCopyrightNotice": {
+	        "attCopyrightNotice": {
 			"description": "Copyright (c) <2016>, AT&T Intellectual Property.  All other rights reserved",
 			"type": "object",
 			"properties": {
@@ -53,21 +53,6 @@
 			},
 			"required": [ "codecIdentifier", "numberInUse" ]
 		},
-        "codecSelected": {
-            "description": "codec selected for the call - 'PCMA', 'G729A', ...",
-			"type": "object",
-			"properties": {
-				"codec": { "type": "string" }
-			}
-        },
-        "codecSelectedTranscoding": {
-            "description": "codecs selected for the call, when transcoding is occurring",
-			"type": "object",
-			"properties": {
-				"calleeSideCodec": { "type": "string" },
-				"callerSideCodec": { "type": "string" }
-			}
-        },
  		"command": {
 			"description": "command from an event collector toward an event source",
 			"type": "object",
@@ -75,6 +60,7 @@
 				"commandType": {
 					"type": "string",
 					"enum": [
+						"heartbeatIntervalChange",
 						"measurementIntervalChange",
 						"provideThrottlingState",
 						"throttlingSpecification"
@@ -114,8 +100,6 @@
 						"measurementsForVfScaling",
 						"mobileFlow",
 						"other",
-						"serviceEvents",
-						"signaling",						
 						"stateChange",
 						"syslog",
 						"thresholdCrossingAlert"
@@ -133,6 +117,7 @@
 					"description": "function of the event source e.g., eNodeB, MME, PCRF",
 					"type": "string"
 				},
+				"internalHeaderFields": { "$ref": "#/definitions/internalHeaderFields" },
 				"lastEpochMicrosec": {
 					"description": "the latest unix time aka epoch time associated with the event from any component--as microseconds elapsed since 1 Jan 1970 not including leap seconds",
 					"type": "number"
@@ -148,7 +133,7 @@
 					]
 				},
 				"reportingEntityId": {
-					"description": "UUID identifying the entity reporting the event, for example an OAM VM",
+					"description": "UUID identifying the entity reporting the event, for example an OAM VM; must be populated by the ATT enrichment process",
 					"type": "string"
 				},
 				"reportingEntityName": {
@@ -160,7 +145,7 @@
 					"type": "integer"
 				},
 				"sourceId": {
-					"description": "UUID identifying the entity experiencing the event issue",
+					"description": "UUID identifying the entity experiencing the event issue; must be populated by the ATT enrichment process",
 					"type": "string"
 				},
 				"sourceName": {
@@ -200,97 +185,6 @@
 			},
 			"required": [ "cpuIdentifier", "percentUsage" ]
 		},
-        "endOfCallVqmSummaries": {
-            "description": "",
-			"type": "object",
-			"properties": {
-                "adjacencyName": {
-                    "description": " adjacency name",
-                    "type": "string"
-                },
-                "endpointDescription": {
-                    "description": "‘Caller’, ‘Callee’",
-                    "type": "string",
-                    "enum": ["Caller", "Callee"]
-                },
-                "endpointJitter": {
-                    "description": "",
-                    "type": "number"
-                },
-                "endpointRtpOctetsDiscarded": {
-                    "description": "",
-                    "type": "number"
-                },
-                "endpointRtpOctetsReceived": {
-                    "description": "",
-                    "type": "number"
-                },
-                "endpointRtpOctetsSent": {
-                    "description": "",
-                    "type": "number"
-                },
-                "endpointRtpPacketsDiscarded": {
-                    "description": "",
-                    "type": "number"
-                },
-                "endpointRtpPacketsReceived": {
-                    "description": "",
-                    "type": "number"
-                },
-                "endpointRtpPacketsSent": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localJitter": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localRtpOctetsDiscarded": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localRtpOctetsReceived": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localRtpOctetsSent": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localRtpPacketsDiscarded": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localRtpPacketsReceived": {
-                    "description": "",
-                    "type": "number"
-                },
-                "localRtpPacketsSent": {
-                    "description": "",
-                    "type": "number"
-                },
-                "mosCqe": {
-                    "description": "1-5 1dp",
-                    "type": "number"
-                },
-                "packetsLost": {
-                    "description": "",
-                    "type": "number"
-                },
-                "packetLossPercent": {
-                    "description" : "Calculated percentage packet loss based on Endpoint RTP packets lost (as reported in RTCP) and Local RTP packets sent. Direction is based on Endpoint description (Caller, Callee). Decimal (2 dp)",
-                    "type": "number"
-                },
-                "rFactor": {
-                    "description": "0-100",
-                    "type": "number"
-                },
-                "roundTripDelay": {
-                    "description": "millisecs",
-                    "type": "number"
-                }
-            }
-        },
 		"errors": {
 			"description": "receive and transmit errors for the measurements domain",
 			"type": "object",
@@ -303,16 +197,14 @@
 			"required": [ "receiveDiscards", "receiveErrors", "transmitDiscards", "transmitErrors" ]
 		},
         "event": {
-            "description": "generic event format",
+            "description": "the root level of the common event format",
 	        "type": "object",
 	        "properties": {
 		        "commonEventHeader": { "$ref": "#/definitions/commonEventHeader" },
 		        "faultFields": { "$ref": "#/definitions/faultFields" },
-	 	        "measurementsForVfScalingFields": { "$ref": "#/definitions/measurementsForVfScalingFields" },
+		        "measurementsForVfScalingFields": { "$ref": "#/definitions/measurementsForVfScalingFields" },
 				"mobileFlowFields": { "$ref": "#/definitions/mobileFlowFields" },
 		        "otherFields": { "$ref": "#/definitions/otherFields" },
-		        "serviceEventsFields": { "$ref": "#/definitions/serviceEventsFields" },
-		        "signalingFields": { "$ref": "#/definitions/signalingFields" },
 		        "stateChangeFields": { "$ref": "#/definitions/stateChangeFields" },
 				"syslogFields": { "$ref": "#/definitions/syslogFields" },
 		        "thresholdCrossingAlertFields": { "$ref": "#/definitions/thresholdCrossingAlertFields" }
@@ -352,33 +244,6 @@
 			},
 			"minItems": 0
 		},
-		"eventInstanceIdentifier": {
-			"description": "event instance identifiers",
-			"type": "object",
-			"properties": {
-				"eventId": {
-					"description": "event identifier",
-					"type": "string"
-				},
-				"vendorId": {
-					"description": "vendor identifier",
-					"type": "string"
-				},
-				"productId": {
-					"description": "product identifier",
-					"type": "string"
-				},
-				"subsystemId": {
-					"description": "subsystem identifier",
-					"type": "string"
-				},
-				"eventFriendlyName": {
-					"description": "event instance friendly name",
-					"type": "string"
-				}
-            },
-			"required": [ "eventId", "vendorId" ]
-        },
 		"eventList": {
 			"description": "array of events",
 			"type": "array",
@@ -750,6 +615,10 @@
 						  "roundTripTime", "timeToFirstByte"
 			]
 		},
+		"internalHeaderFields": {
+			"description": "enrichment fields for internal VES Event Listener service use only, not supplied by event sources",
+			"type": "object"
+		},
 		"latencyBucketMeasure": {
 			"description": "number of counts falling within a defined latency bucket",
 			"type": "object",
@@ -760,13 +629,6 @@
 			},
 			"required": [ "countsInTheBucket" ]
 		},
-        "marker": {
-            "description": "",
-			"type": "object",
-			"properties": {
-				"phoneNumber": { "type": "string" }
-			}
-        },
 		"measurementGroup": {
 			"description": "measurement group",
 			"type": "object",
@@ -854,11 +716,11 @@
 					"type": "number"
 				},
 				"memoryConfigured": {
-					"description": "memory configured in the VM on which the VNFC reporting the event is running",
+					"description": "memory in MB configured in the VM on which the VNFC reporting the event is running",
 					"type": "number"
 				},
 				"memoryUsed": {
-					"description": "memory usage of the VM on which the VNFC reporting the event is running",
+					"description": "memory usage in MB of the VM on which the VNFC reporting the event is running",
 					"type": "number"
 				},
 				"numberOfMediaPortsInUse": {
@@ -883,20 +745,17 @@
 			},
 			"required": [ "measurementInterval" ]
 		},
-        "midCallRtcp": {
-            "description": "RTCP packet received ",
-			"type": "object",
-			"properties": {
-				"rtcpData": {
-                    "description": "Base64 encoding of the binary RTCP data (excluding Eth/IP/UDP headers) Base64 encoded array of bytes",
-                    "type": "string"
-                }
-			}
-        },
 		"mobileFlowFields": {
 			"description": "mobileFlow fields",
 			"type": "object",
 			"properties": {
+				"additionalFields": {
+					"description": "additional mobileFlow fields if needed",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/field"
+					}
+				},
 				"applicationType": {
 					"description": "Application type inferred",
 					"type": "string"
@@ -1057,88 +916,6 @@
 			},
 			"required": [ "messageId", "text" ]
 		},
-        "serviceEventsFields": {
-            "description": "service events fields",
-            "type": "object",
-            "properties": {
-                "additionalFields": {
-					"description": "additional service event fields if needed",
-					"type": "array",
-					"items": {  
-						"$ref": "#/definitions/field" 
-					}
-                },
-                "codecSelected": {
-                    "$ref": "#/definitions/codecSelected"
-                },
-                "codecSelectedTranscoding": {
-                    "$ref": "#/definitions/codecSelectedTranscoding"
-                },
-                "correlator": {
-                    "description": "this is the same for all events on this call",
-                    "type": "string"
-                },
-                "endOfCallVqmSummaries": {
-                    "$ref": "#/definitions/endOfCallVqmSummaries"
-                },
-                "eventInstanceIdentifier": {
-                    "$ref": "#/definitions/eventInstanceIdentifier"
-                },
-                "marker": {
-                    "$ref": "#/definitions/marker"
-                },
-                "midCallRtcp": {
-                    "$ref": "#/definitions/midCallRtcp"
-                },
-                "serviceEventsFieldsVersion": {
-                    "description": "version of the serviceEventsFields block",
-                    "type": "number"
-                }
-            },
-            "required": [ "eventInstanceIdentifier" ]
-        },
-        "signalingFields": {
-            "description": "signaling fields",
-            "type": "object",
-            "properties": {
-                "compressedSip": {
-                    "description": "the full SIP request/response including headers and bodies",
-                    "type": "string"
-                },
-                "correlator": {
-                    "description": "this is the same for all events on this call",
-                    "type": "string"
-                },
-                "eventInstanceIdentifier": {
-                    "$ref": "#/definitions/eventInstanceIdentifier"
-                },
-                "localIpAddress": {
-                    "description": "IP address on VNF",
-                    "type": "string"
-                },
-                "localPort": {
-                    "description": "port on VNF",
-                    "type": "string"
-                },
-                "remoteIpAddress": {
-                    "description": "IP address of peer endpoint",
-                    "type": "string"
-                },
-                "remotePort": {
-                    "description": "port of peer endpoint",
-                    "type": "string"
-                },
-                "signalingFieldsVersion": {
-                    "description": "version of the signalingFields block",
-                    "type": "number"
-                },
-                "summarySip": {
-                    "description": "the SIP Method or Response (‘INVITE’, ‘200 OK’, ‘BYE’, etc)",
-                    "type": "string"
-                }
-            },
-            "required": [ "eventInstanceIdentifier" ]
-        },
 		"stateChangeFields": {
 			"description": "stateChange fields",
 			"type": "object",
@@ -1228,6 +1005,10 @@
 					"description": "syslog message",
 					"type": "string"
 				},
+				"syslogPri": {
+					"description": "0-192 combined severity and facility",
+					"type": "number"
+				},
 				"syslogProc": {
 					"description": "identifies the application that originated the message",
 					"type": "string"
@@ -1238,6 +1019,14 @@
 				},
 				"syslogSData": {
 					"description": "syslog structured data consisting of a structured data Id followed by a set of key value pairs",
+					"type": "string"
+				},
+				"syslogSdId": {
+					"description": "0-32 char in format name@number for example ourSDID@32473",
+					"type": "string"
+				},
+				"syslogSev": {
+					"description": "numerical Code for  severity derived from syslogPri as remaider of syslogPri / 8",
 					"type": "string"
 				},
 				"syslogTag": {
