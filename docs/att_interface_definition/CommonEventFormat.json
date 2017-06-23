@@ -1429,12 +1429,12 @@
                     "description": "the SIP Method or Response (â€˜INVITEâ€™, â€˜200 OKâ€™, â€˜BYEâ€™, etc)",
                     "type": "string"
                 },
-                "vnfVendorNameFields": {
-                    "$ref": "#/definitions/vnfVendorNameFields"
+                "vendorVnfNameFields": {
+                    "$ref": "#/definitions/vendorVnfNameFields"
                 }
             },
             "required": [ "correlator", "localIpAddress", "localPort", "remoteIpAddress", 
-			              "remotePort", "sipSignalingFieldsVersion", "vnfVendorNameFields" ]
+			              "remotePort", "sipSignalingFieldsVersion", "vendorVnfNameFields" ]
         },
 		"stateChangeFields": {
 			"description": "stateChange fields",
